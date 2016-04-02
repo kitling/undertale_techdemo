@@ -459,7 +459,7 @@ int main (int argc, char **argv) {
 		
 		if (player_y >= 116 && player_y <= 156 && player_x <= 41 && playerDir == FRISK_LEFT) { // this needs work!
 			
-			room 		= 0;
+			room 		= 1;
 			roomEnter 	= 2;
 			
 		}
