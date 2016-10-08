@@ -31,6 +31,15 @@ float roomTimer = 255;
 position player_pos;
 position camera_pos = {0, 0};
 
+//variables that are used for movement key presses
+//  TODO: Consolidate all input variables
+int mkey_right = 0;
+int mkey_up = 0;
+int mkey_left = 0;
+int mkey_down = 0;
+
+//Movement variables
+float mspeed = .5; // Speed multiplier
 float hsp = 0; // Horizontal speed
 float vsp = 0; // Vertical speed
 
@@ -58,15 +67,15 @@ const char *friskFilenames[4][4] = {
     {"friskBack0", "friskBack1", "friskBack2", "friskBack3"}  // Up
 };
 
-enum direction {
+enum direction { // I request that you change FORWARD and BACK to UP and DOWN, since forward to the player means back to the in game character. It's confusing to me.
     RIGHT = 0,
-    FORWARD,
+    BACK,
     LEFT,
-    BACK
+    FORWARD
 };
 
-// This is one thing that could go into a player struct.
-enum direction playerDir = RIGHT; // Direction
+// TODO: This is one thing that could go into a player struct.
+enum direction playerDir = FORWARD; // Direction
 
 // Easter Egg variables
 bool easterEgg  = false;
@@ -83,7 +92,9 @@ void timerStep(void) {
 
     // We don't want to dt to be negative.
     // TODO: Can this ever actually happen?
+    //Sure can, it's not supposed to though. Better yet... DT shouldn't be a large value either
     if (dt < 0) dt = 0;
+    if (abs(dt) > 1) dt = 0.0001; //Just in case.
 
     // Set previous time to the current time
     prevTime = currTime;
@@ -221,6 +232,9 @@ int main(void) {
         timerStep();
 
         // If no movement, set the sprite timer to 0
+        //  TODO: I think this part isn't needed, or is wrong lol.
+        // The following says that is a key is pressed (not held) reset the sprite timer
+        // Contradicts the comment.
         if (kDown & KEY_UP || kDown & KEY_DOWN || kDown & KEY_LEFT || kDown & KEY_RIGHT) {
             sprTimer = 0;
         }
@@ -230,37 +244,48 @@ int main(void) {
         hsp = 0;
 
         // Player movement (pretty easy to understand)
-        // TODO: Would it be possible to make this less... iffy?
-        if (kHeld & KEY_UP) {
-            if (!(kHeld & KEY_DOWN)) {
-                vsp = -.5; // Vertical speed to negative .5
-                playerDir = BACK; // Player direction = back
-            }
+        // TODO: Would it be possible to make this less... iffy? --- Sure. :P
+        //Thank GML for being VERY similar to C++ :)
+        //I'll explain my thought process clearly here.
+        //I'm going to seperate input, movement, and direction into different segments.
+        //  input
+        mkey_right = (kHeld & KEY_RIGHT); //assuming booleans work how I think they do here.. this should make mkey_right 1 when the right key is pressed.
+        mkey_up = -(kHeld & KEY_BACK);  // -1 when held.
+        mkey_left = -(kHeld & KEY_LEFT);  // ^^^^
+        mkey_down = (kHeld & KEY_FORWARD);  // 1 when held ... also why FORWARD/BACK?? It's confusing.
+
+        //  direction - Too lazy to write explaination. Can do it later if you like. I'm sleepy.
+        if (dir_key > 0) { // The original direction key isn't pressed:
+          if ((kDown & KEY_RIGHT) && dir_key == 0)) ||  ((kDown & KEY_BACK) && dir_key == 1)) || ((kDown & KEY_LEFT) && dir_key == 2)) || ((kDown & KEY_FORWARD) && dir_key == 3)) {
+            dir_key = -1;
+          }
+        }
+        if (dir_key == -1) {
+          if (kDown & KEY_RIGHT) {
+            dir_key = 0;
+          }
+          else if (kDown & KEY_BACK) {
+            dir_key = 1;
+          }
+          else if (kDown & KEY_LEFT) {
+            dir_key = 2;
+          }
+          else if (kDown & KEY_FORWARD) {
+            dir_key = 3;
+          }
+          else { dir_key = -1; }
+        }
+        if (dir_key > 0) {
+          player_dir = dir_key;
         }
 
-        if (kHeld & KEY_DOWN) {
-            vsp = .5; // Vertical speed to .5
-            playerDir = FORWARD; // Player direction = up
-        }
-
-        if (kHeld & KEY_LEFT) {
-            if (!(kHeld & KEY_RIGHT)) {
-                hsp = -.5; // Vertical speed to negative .5
-                playerDir = LEFT; // Player direction = left
-            }
-        }
-
-        if (kHeld & KEY_RIGHT) {
-            hsp = .5; // Vertical speed to .5
-            playerDir = RIGHT; // Player direction = right
-        }
-
-        // Diagonal movement speed fix
-        if (vsp != 0) {
-            if (hsp != 0) {
-                vsp *= .8;
-                hsp *= .8;
-            }
+        //  movement
+        hsp = (mkey_left + mkey_right) * mspeed; //set speed for easier movement speed modifying.
+        vps = (mkey_up + mkey_down) * mspeed;
+        //  TODO: vvvvv This isn't in Undertale . But it's a feature most top down games have. Feel free to remove it. vvvvv
+        if (abs(vsp) > 0) && (abs(hsp) > 0) { //halve horizonal and vertical speeds when moving diagonally.
+          hsp *= .5;
+          vsp *= .5;
         }
 
         // Movement calculation... AND proper room colision.
